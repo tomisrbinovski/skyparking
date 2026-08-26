@@ -410,8 +410,8 @@
     const en=lang==='en';
     const fields={
       name:en?'Your full name':'Вашето име и презиме',
-      phone:'+389 ...',
-      email:'you@example.com',
+      phone:en?'+389 71 304 407':'071 304 407',
+      email:en?'you@example.com':'vasheta@email.com',
       registration:en?'e.g. SK 1234 AB':'пр. SK 1234 AB',
       notes:en?'Anything we should know?':'Дали има нешто што треба да го знаеме?'
     };
@@ -424,10 +424,32 @@
     const selector=document.getElementById('languageSelect');
     if(selector) selector.setAttribute('aria-label',en?'Language selector':'Избор на јазик');
   }
+  // Robust bilingual translation: the old version translated by DOM text-node
+  // position. That breaks as soon as .new-i18n elements are skipped, because
+  // those strings are still present in the translation arrays. GitHub Pages
+  // does not change the HTML; this was a client-side indexing bug.
+  const MK_TO_EN = new Map();
+  const EN_TO_MK = new Map();
+  MK_TEXT.forEach(function(mk, i){
+    const en = EN_TEXT[i];
+    if (en !== undefined) {
+      if (!MK_TO_EN.has(mk)) MK_TO_EN.set(mk, en);
+      if (!EN_TO_MK.has(en)) EN_TO_MK.set(en, mk);
+    }
+  });
+
+  function translateNode(node, lang){
+    const value = node.nodeValue;
+    if (lang === 'en') {
+      if (MK_TO_EN.has(value)) node.nodeValue = MK_TO_EN.get(value);
+    } else {
+      if (EN_TO_MK.has(value)) node.nodeValue = EN_TO_MK.get(value);
+    }
+  }
+
   function applyLanguage(lang){
     currentLang=lang==='en'?'en':'mk';
-    const texts=currentLang==='en'?EN_TEXT:MK_TEXT;
-    textNodes().forEach((node,i)=>{if(texts[i]!==undefined)node.nodeValue=texts[i];});
+    textNodes().forEach(function(node){ translateNode(node, currentLang); });
     document.querySelectorAll('.new-i18n [data-lang]').forEach(function(el){
       el.classList.toggle('active', el.getAttribute('data-lang')===currentLang);
     });
@@ -436,7 +458,7 @@
     const meta=document.querySelector('meta[name="description"]');
     if(meta)meta.content=currentLang==='en'?"Sky Parking — secure 24/7 parking garage opposite Capitol Mall and next to Biser in Skopje. 200+ parking spaces, CCTV security, card and cash payments, Avant2Go electric car rental and office spaces.":"Sky Parking — безбедна гаража за паркирање 24/7 спроти Capitol Mall и до Бисер во Скопје. 200+ паркинг места, видео-надзор, плаќање со картичка и готовина, изнајмување електрични возила Avant2Go и деловен простор.";
     const subject=document.querySelector('#reservationForm input[name="_subject"]');
-    if(subject)subject.value=currentLang==='en'?'New Parking Reservation Request — Sky Parking':'New Parking Reservation Request — Sky Parking';
+    if(subject)subject.value='New Parking Reservation Request — Sky Parking';
     document.documentElement.lang=currentLang;
     const selector=document.getElementById('languageSelect');
     if(selector)selector.value=currentLang;
